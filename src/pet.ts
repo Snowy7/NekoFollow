@@ -238,6 +238,7 @@ function sanitize(input: Partial<PetSettings>): PetSettings {
     saturate: clamp(input.saturate, 0, 300, DEFAULT_SETTINGS.saturate),
     tintColor: hexColor(input.tintColor, DEFAULT_SETTINGS.tintColor),
     tintStrength: clamp(input.tintStrength, 0, 100, DEFAULT_SETTINGS.tintStrength),
+    darkMode: Boolean(input.darkMode ?? DEFAULT_SETTINGS.darkMode),
   };
 }
 

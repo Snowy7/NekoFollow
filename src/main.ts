@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import iconSvg from "./assets/icon.svg";
+import catIcon from "./assets/cat-idle.png";
 import "./styles.css";
 import { DEFAULT_SETTINGS, type PetSettings } from "./types";
 
@@ -7,91 +7,95 @@ import { DEFAULT_SETTINGS, type PetSettings } from "./types";
 
 const STORAGE_KEY = "neko-runner-settings";
 
+/* ── SVG Icons ── */
+
+const SUN_ICON = `<svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-3a1 1 0 0 0 1-1V1a1 1 0 0 0-2 0v2a1 1 0 0 0 1 1zm0 18a1 1 0 0 0-1 1v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-1-1zm9-9h-2a1 1 0 0 0 0 2h2a1 1 0 0 0 0-2zM4 12a1 1 0 0 0-1-1H1a1 1 0 0 0 0 2h2a1 1 0 0 0 1-1zm15.07-6.07a1 1 0 0 0 0-1.41l-1.42-1.42a1 1 0 1 0-1.41 1.42l1.41 1.41a1 1 0 0 0 1.42 0zM6.34 18.66a1 1 0 0 0-1.41 0l-1.42 1.42a1 1 0 0 0 1.42 1.41l1.41-1.41a1 1 0 0 0 0-1.42zm12.73 0a1 1 0 0 0-1.42 1.42l1.42 1.41a1 1 0 0 0 1.41-1.41l-1.41-1.42zM4.93 5.93a1 1 0 0 0 1.42-1.42L4.93 3.1a1 1 0 0 0-1.42 1.41l1.42 1.42z"/></svg>`;
+
+const MOON_ICON = `<svg viewBox="0 0 24 24"><path d="M12.3 4.9a7.5 7.5 0 0 0 6.8 11.6A9 9 0 1 1 12.3 4.9z"/></svg>`;
+
 /* ── DOM Setup ── */
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Missing #app element");
 
 app.innerHTML = /* html */ `
-  <main class="panel" role="main">
+  <header class="header">
+    <img class="header-icon" src="${catIcon}" alt="" />
+    <div>
+      <h1>Neko Runner</h1>
+      <p>Close this window — the cat stays!</p>
+    </div>
+    <div class="header-actions">
+      <button class="theme-btn" id="theme-toggle" type="button" title="Toggle theme">
+        ${SUN_ICON}
+      </button>
+    </div>
+  </header>
 
-    <header class="header">
-      <img class="header-icon" src="${iconSvg}" alt="Neko Runner" />
-      <div class="header-text">
-        <h1>Neko Runner</h1>
-        <p>Your desktop cat companion. Close this window — the cat stays!</p>
-      </div>
-    </header>
+  <section class="section">
+    <div class="section-title">General</div>
 
-    <!-- General -->
-    <section class="section">
-      <div class="section-title">General</div>
-
-      <div class="toggle-field">
-        <span class="toggle-label">Enable Cat</span>
-        <label class="switch">
-          <input id="enabled" type="checkbox" />
-          <span class="switch-track"></span>
-        </label>
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="speed">Follow Speed</label>
-        <input id="speed" type="range" min="2" max="20" step="1" />
-        <span class="field-value" id="speed-val"></span>
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="size">Cat Size</label>
-        <input id="size" type="range" min="24" max="192" step="1" />
-        <span class="field-value" id="size-val"></span>
-      </div>
-    </section>
-
-    <!-- Appearance -->
-    <section class="section">
-      <div class="section-title">Appearance</div>
-
-      <div class="toggle-field">
-        <span class="toggle-label">Invert Colors</span>
-        <label class="switch">
-          <input id="invert" type="checkbox" />
-          <span class="switch-track"></span>
-        </label>
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="hue">Hue Rotate</label>
-        <input id="hue" type="range" min="0" max="360" step="1" />
-        <span class="field-value" id="hue-val"></span>
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="saturate">Saturation</label>
-        <input id="saturate" type="range" min="0" max="300" step="1" />
-        <span class="field-value" id="saturate-val"></span>
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="tint-color">Tint Color</label>
-        <input id="tint-color" type="color" />
-        <span class="field-value" id="tint-color-val"></span>
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="tint-strength">Tint Strength</label>
-        <input id="tint-strength" type="range" min="0" max="100" step="1" />
-        <span class="field-value" id="tint-strength-val"></span>
-      </div>
-    </section>
-
-    <!-- Status -->
-    <div class="status-bar">
-      <span class="status-dot" id="status-dot"></span>
-      <span id="status-text">Initializing…</span>
+    <div class="toggle-field">
+      <span class="toggle-label">Enable Cat</span>
+      <label class="switch">
+        <input id="enabled" type="checkbox" />
+        <span class="switch-track"></span>
+      </label>
     </div>
 
-  </main>
+    <div class="field">
+      <label class="field-label" for="speed">Follow Speed</label>
+      <input id="speed" type="range" min="2" max="20" step="1" />
+      <span class="field-value" id="speed-val"></span>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="size">Cat Size</label>
+      <input id="size" type="range" min="24" max="192" step="1" />
+      <span class="field-value" id="size-val"></span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">Appearance</div>
+
+    <div class="toggle-field">
+      <span class="toggle-label">Invert Colors</span>
+      <label class="switch">
+        <input id="invert" type="checkbox" />
+        <span class="switch-track"></span>
+      </label>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="hue">Hue Rotate</label>
+      <input id="hue" type="range" min="0" max="360" step="1" />
+      <span class="field-value" id="hue-val"></span>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="saturate">Saturation</label>
+      <input id="saturate" type="range" min="0" max="300" step="1" />
+      <span class="field-value" id="saturate-val"></span>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="tint-color">Tint Color</label>
+      <input id="tint-color" type="color" />
+      <span class="field-value" id="tint-color-val"></span>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="tint-strength">Tint Strength</label>
+      <input id="tint-strength" type="range" min="0" max="100" step="1" />
+      <span class="field-value" id="tint-strength-val"></span>
+    </div>
+  </section>
+
+  <div class="status-bar">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="status-text">Initializing…</span>
+  </div>
 `;
 
 /* ── Element References ── */
@@ -113,6 +117,7 @@ const el = {
   tintStrengthVal: getSpan("tint-strength-val"),
   statusDot: getSpan("status-dot"),
   statusText: getSpan("status-text"),
+  themeToggle: document.getElementById("theme-toggle") as HTMLButtonElement,
 };
 
 /* ── State ── */
@@ -127,18 +132,34 @@ async function bootstrap(): Promise<void> {
   const persisted = loadSettings();
   const backend = await invoke<PetSettings>("get_settings");
   settings = sanitize(persisted ?? backend);
+
+  applyTheme(settings.darkMode);
   render();
   await push();
 
-  const inputs = [
+  for (const input of [
     el.enabled, el.speed, el.size, el.invert,
     el.hue, el.saturate, el.tintColor, el.tintStrength,
-  ];
-
-  for (const input of inputs) {
+  ]) {
     input.addEventListener("input", handleInput);
     input.addEventListener("change", handleInput);
   }
+
+  el.themeToggle.addEventListener("click", toggleTheme);
+}
+
+/* ── Theme ── */
+
+function applyTheme(dark: boolean): void {
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  el.themeToggle.innerHTML = dark ? SUN_ICON : MOON_ICON;
+  el.themeToggle.title = dark ? "Switch to light mode" : "Switch to dark mode";
+}
+
+function toggleTheme(): void {
+  settings.darkMode = !settings.darkMode;
+  applyTheme(settings.darkMode);
+  saveSettings(settings);
 }
 
 /* ── Event Handler ── */
@@ -153,6 +174,7 @@ async function handleInput(): Promise<void> {
     saturate: Number(el.saturate.value),
     tintColor: el.tintColor.value,
     tintStrength: Number(el.tintStrength.value),
+    darkMode: settings.darkMode,
   });
   render();
   await push();
@@ -162,7 +184,9 @@ async function handleInput(): Promise<void> {
 
 async function push(): Promise<void> {
   try {
-    settings = await invoke<PetSettings>("update_settings", { settings });
+    const backendSettings = await invoke<PetSettings>("update_settings", { settings });
+    // Backend may not know about darkMode, so preserve it
+    settings = { ...sanitize(backendSettings), darkMode: settings.darkMode };
     saveSettings(settings);
     setStatus(settings.enabled);
   } catch (err) {
@@ -195,7 +219,7 @@ function setStatus(enabled: boolean): void {
   el.statusDot.className = `status-dot ${enabled ? "active" : "inactive"}`;
   el.statusText.textContent = enabled
     ? "Cat is active — close this window to keep it running in the background."
-    : "Cat is paused. Toggle the switch above to bring it back.";
+    : "Cat is paused.";
 }
 
 /* ── Persistence ── */
@@ -225,6 +249,7 @@ function sanitize(input: Partial<PetSettings>): PetSettings {
     saturate: clamp(input.saturate, 0, 300, DEFAULT_SETTINGS.saturate),
     tintColor: hexColor(input.tintColor, DEFAULT_SETTINGS.tintColor),
     tintStrength: clamp(input.tintStrength, 0, 100, DEFAULT_SETTINGS.tintStrength),
+    darkMode: Boolean(input.darkMode ?? DEFAULT_SETTINGS.darkMode),
   };
 }
 

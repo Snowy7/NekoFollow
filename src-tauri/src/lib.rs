@@ -28,6 +28,9 @@ struct PetSettings {
     saturate: f64,
     tint_color: String,
     tint_strength: f64,
+    /// Frontend-only setting; ignored by backend logic.
+    #[serde(default)]
+    dark_mode: bool,
 }
 
 impl Default for PetSettings {
@@ -41,6 +44,7 @@ impl Default for PetSettings {
             saturate: 100.0,
             tint_color: "#ff8a3d".to_string(),
             tint_strength: 0.0,
+            dark_mode: false,
         }
     }
 }
@@ -116,6 +120,7 @@ fn normalize(input: PetSettings) -> PetSettings {
         saturate: input.saturate.clamp(0.0, 300.0),
         tint_color: normalize_hex(&input.tint_color),
         tint_strength: input.tint_strength.clamp(0.0, 100.0),
+        dark_mode: input.dark_mode,
     }
 }
 

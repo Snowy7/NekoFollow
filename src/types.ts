@@ -10,6 +10,7 @@ export interface PetSettings {
   saturate: number;
   tintColor: string;
   tintStrength: number;
+  darkMode: boolean;
 }
 
 /**
@@ -32,4 +33,5 @@ export const DEFAULT_SETTINGS: PetSettings = {
   saturate: 100,
   tintColor: "#ff8a3d",
   tintStrength: 0,
+  darkMode: false,
 };
