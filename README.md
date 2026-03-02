@@ -1,18 +1,80 @@
-# Neko Runner (Tauri)
+# 🐱 Neko Runner
 
-A local-first Tauri desktop pet:
-- transparent always-on-top cat window in the background
-- tray icon to reopen controls
-- live controls for speed, size, enable/disable, invert, hue, and saturation
+A desktop cat companion built with [Tauri](https://tauri.app/). A pixel-art cat follows your cursor around the screen in a transparent, always-on-top overlay window.
 
-## Scripts
+![Tauri](https://img.shields.io/badge/Tauri-2.0-blue?logo=tauri)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?logo=typescript)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-- `npm install`
-- `npm run tauri dev`
-- `npm run build`
-- `npx tauri build --no-bundle --debug`
+## Features
 
-## Notes
+- **Desktop pet** — a pixel cat chases your cursor across the screen
+- **Transparent overlay** — the cat window is frameless, always-on-top, and click-through
+- **System tray** — minimize to tray; right-click for quick controls
+- **Customization** — adjust speed, size, hue, saturation, tint color, and invert
+- **Persistent settings** — your preferences are saved across sessions
+- **Lightweight** — native Rust backend, no Electron overhead
 
-- The cat behavior is based on `oneko.js`, adapted to track global cursor position through Rust commands.
-- The sprite sheet is stored locally at `src/assets/oneko.gif` (no runtime `fetch`/`eval`).
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) ≥ 18
+- [Rust](https://www.rust-lang.org/tools/install) (stable)
+- [Tauri CLI](https://tauri.app/start/prerequisites/)
+
+## Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Run in development
+npm run tauri dev
+
+# Build for production
+npm run tauri build
+```
+
+## Project Structure
+
+```
+├── index.html             # Controls window entry point
+├── pet.html               # Pet overlay window entry point
+├── src/
+│   ├── main.ts            # Controls panel logic
+│   ├── pet.ts             # Pet animation & cursor tracking
+│   ├── types.ts           # Shared TypeScript types
+│   ├── styles.css         # Controls panel styles
+│   ├── pet.css            # Pet overlay styles
+│   └── assets/
+│       ├── icon.svg       # App icon source
+│       └── oneko.gif      # Cat sprite sheet
+├── src-tauri/
+│   ├── src/
+│   │   ├── lib.rs         # Tauri commands & app setup
+│   │   └── main.rs        # Entry point
+│   ├── icons/             # Generated app icons
+│   ├── Cargo.toml         # Rust dependencies
+│   └── tauri.conf.json    # Tauri configuration
+├── vite.config.ts         # Vite bundler config
+└── tsconfig.json          # TypeScript config
+```
+
+## How It Works
+
+1. **Rust backend** uses `device_query` to read the global cursor position
+2. **Pet window** (`pet.html`) is a transparent, always-on-top, click-through overlay
+3. The cat sprite animates toward the cursor using directional sprite frames from `oneko.gif`
+4. **Controls window** (`index.html`) lets you tweak appearance settings in real-time
+5. Settings sync between windows via Tauri events and persist in `localStorage`
+
+## Generating Icons
+
+To regenerate app icons from the SVG source:
+
+```bash
+npx tauri icon src/assets/icon.svg
+```
+
+## License
+
+MIT

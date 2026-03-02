@@ -14,10 +14,12 @@
     "windows": [
       {
         "title": "Neko Runner",
-        "width": 720,
-        "height": 460,
+        "label": "main",
+        "width": 620,
+        "height": 520,
         "minWidth": 360,
-        "minHeight": 260
+        "minHeight": 320,
+        "center": true
       }
     ],
     "security": {

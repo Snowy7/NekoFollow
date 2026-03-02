@@ -5,20 +5,24 @@ use tauri::{
     menu::MenuBuilder,
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     webview::Color,
-    Emitter, LogicalPosition, LogicalSize, Manager, Position, Size, WebviewUrl, WebviewWindowBuilder,
-    WindowEvent,
+    Emitter, LogicalPosition, LogicalSize, Manager, Position, Size, WebviewUrl,
+    WebviewWindowBuilder, WindowEvent,
 };
 
-const SHOW_CONTROLS_ID: &str = "show_controls";
-const TOGGLE_PET_ID: &str = "toggle_pet";
-const QUIT_ID: &str = "quit";
+// ── Menu item IDs ──
+
+const SHOW_CONTROLS: &str = "show_controls";
+const TOGGLE_PET: &str = "toggle_pet";
+const QUIT: &str = "quit";
+
+// ── Types ──
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PetSettings {
+    enabled: bool,
     speed: f64,
     size: u32,
-    enabled: bool,
     invert: bool,
     hue_rotate: f64,
     saturate: f64,
@@ -29,9 +33,9 @@ struct PetSettings {
 impl Default for PetSettings {
     fn default() -> Self {
         Self {
+            enabled: true,
             speed: 10.0,
             size: 64,
-            enabled: true,
             invert: false,
             hue_rotate: 0.0,
             saturate: 100.0,
@@ -52,13 +56,15 @@ struct AppState {
     settings: Mutex<PetSettings>,
 }
 
+// ── Tauri Commands ──
+
 #[tauri::command]
 fn get_cursor_position() -> CursorPosition {
-    let device_state = DeviceState::new();
-    let mouse_state = device_state.get_mouse();
+    let device = DeviceState::new();
+    let mouse = device.get_mouse();
     CursorPosition {
-        x: mouse_state.coords.0,
-        y: mouse_state.coords.1,
+        x: mouse.coords.0,
+        y: mouse.coords.1,
     }
 }
 
@@ -67,8 +73,8 @@ fn get_settings(state: tauri::State<'_, AppState>) -> Result<PetSettings, String
     state
         .settings
         .lock()
-        .map(|settings| settings.clone())
-        .map_err(|_| "settings lock poisoned".to_string())
+        .map(|s| s.clone())
+        .map_err(|_| "settings lock poisoned".into())
 }
 
 #[tauri::command]
@@ -77,81 +83,74 @@ fn update_settings(
     state: tauri::State<'_, AppState>,
     settings: PetSettings,
 ) -> Result<PetSettings, String> {
-    let normalized = normalize_settings(settings);
+    let normalized = normalize(settings);
+
     {
-        let mut guard = state
-            .settings
-            .lock()
-            .map_err(|_| "settings lock poisoned".to_string())?;
+        let mut guard = state.settings.lock().map_err(|_| "lock poisoned")?;
         *guard = normalized.clone();
     }
 
-    apply_settings_to_pet(&app, &normalized)?;
+    apply_to_pet_window(&app, &normalized)?;
     let _ = app.emit_to("pet", "pet-settings-updated", &normalized);
     Ok(normalized)
 }
 
 #[tauri::command]
 fn move_pet_window(app: tauri::AppHandle, x: i32, y: i32) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("pet") {
-        window
-            .set_position(Position::Logical(LogicalPosition::new(x as f64, y as f64)))
+    if let Some(win) = app.get_webview_window("pet") {
+        win.set_position(Position::Logical(LogicalPosition::new(x as f64, y as f64)))
             .map_err(|e| e.to_string())?;
     }
     Ok(())
 }
 
-fn normalize_settings(input: PetSettings) -> PetSettings {
+// ── Settings Helpers ──
+
+fn normalize(input: PetSettings) -> PetSettings {
     PetSettings {
+        enabled: input.enabled,
         speed: input.speed.clamp(2.0, 20.0),
         size: input.size.clamp(24, 192),
-        enabled: input.enabled,
         invert: input.invert,
         hue_rotate: input.hue_rotate.clamp(0.0, 360.0),
         saturate: input.saturate.clamp(0.0, 300.0),
-        tint_color: normalize_hex_color(&input.tint_color),
+        tint_color: normalize_hex(&input.tint_color),
         tint_strength: input.tint_strength.clamp(0.0, 100.0),
     }
 }
 
-fn normalize_hex_color(input: &str) -> String {
-    let value = input.trim().to_lowercase();
-    let is_hex = value.starts_with('#')
-        && value.len() == 7
-        && value.chars().skip(1).all(|ch| ch.is_ascii_hexdigit());
-    if is_hex {
-        value
-    } else {
-        "#ff8a3d".to_string()
-    }
+fn normalize_hex(input: &str) -> String {
+    let v = input.trim().to_lowercase();
+    let valid = v.starts_with('#')
+        && v.len() == 7
+        && v.chars().skip(1).all(|c| c.is_ascii_hexdigit());
+    if valid { v } else { "#ff8a3d".into() }
 }
 
-fn apply_settings_to_pet(app: &tauri::AppHandle, settings: &PetSettings) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("pet") {
-        window
-            .set_size(Size::Logical(LogicalSize::new(
-                settings.size as f64,
-                settings.size as f64,
-            )))
+// ── Window Management ──
+
+fn apply_to_pet_window(app: &tauri::AppHandle, settings: &PetSettings) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("pet") {
+        let size = settings.size as f64;
+        win.set_size(Size::Logical(LogicalSize::new(size, size)))
             .map_err(|e| e.to_string())?;
-        window
-            .set_always_on_top(true)
+        win.set_always_on_top(true)
             .map_err(|e| e.to_string())?;
 
         if settings.enabled {
-            window.show().map_err(|e| e.to_string())?;
+            win.show().map_err(|e| e.to_string())?;
         } else {
-            window.hide().map_err(|e| e.to_string())?;
+            win.hide().map_err(|e| e.to_string())?;
         }
     }
     Ok(())
 }
 
-fn show_controls_window(app: &tauri::AppHandle) {
-    if let Some(main) = app.get_webview_window("main") {
-        let _ = main.show();
-        let _ = main.unminimize();
-        let _ = main.set_focus();
+fn show_controls(app: &tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.show();
+        let _ = win.unminimize();
+        let _ = win.set_focus();
     }
 }
 
@@ -164,10 +163,12 @@ fn create_pet_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
         .state::<AppState>()
         .settings
         .lock()
-        .map(|value| value.clone())
+        .map(|s| s.clone())
         .unwrap_or_default();
 
-    let window = WebviewWindowBuilder::new(app, "pet", WebviewUrl::App("pet.html".into()))
+    let size = settings.size as f64;
+
+    let win = WebviewWindowBuilder::new(app, "pet", WebviewUrl::App("pet.html".into()))
         .title("Neko Pet")
         .visible(settings.enabled)
         .focused(false)
@@ -178,48 +179,45 @@ fn create_pet_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
         .resizable(false)
         .always_on_top(true)
         .skip_taskbar(true)
-        .inner_size(settings.size as f64, settings.size as f64)
+        .inner_size(size, size)
         .build()?;
 
-    let _ = window.set_ignore_cursor_events(true);
-    let _ = window.set_always_on_top(true);
-    let _ = window.set_shadow(false);
-    let _ = window.set_background_color(Some(Color(0, 0, 0, 0)));
+    let _ = win.set_ignore_cursor_events(true);
+    let _ = win.set_always_on_top(true);
+    let _ = win.set_shadow(false);
+    let _ = win.set_background_color(Some(Color(0, 0, 0, 0)));
 
     Ok(())
 }
 
 fn create_tray(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
-    let tray_menu = MenuBuilder::new(app)
-        .text(SHOW_CONTROLS_ID, "Open Controls")
-        .text(TOGGLE_PET_ID, "Toggle Cat")
+    let menu = MenuBuilder::new(app)
+        .text(SHOW_CONTROLS, "Open Controls")
+        .text(TOGGLE_PET, "Toggle Cat")
         .separator()
-        .text(QUIT_ID, "Quit")
+        .text(QUIT, "Quit")
         .build()?;
 
-    let mut tray_builder = TrayIconBuilder::with_id("neko-runner-tray")
-        .menu(&tray_menu)
+    let mut builder = TrayIconBuilder::with_id("neko-runner-tray")
+        .menu(&menu)
         .tooltip("Neko Runner")
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
-            SHOW_CONTROLS_ID => show_controls_window(app),
-            TOGGLE_PET_ID => {
+            SHOW_CONTROLS => show_controls(app),
+            TOGGLE_PET => {
                 let updated = {
                     let state = app.state::<AppState>();
-                    let maybe_updated = if let Ok(mut guard) = state.settings.lock() {
+                    state.settings.lock().ok().map(|mut guard| {
                         guard.enabled = !guard.enabled;
-                        Some(guard.clone())
-                    } else {
-                        None
-                    };
-                    maybe_updated
+                        guard.clone()
+                    })
                 };
-                if let Some(normalized) = updated {
-                    let _ = apply_settings_to_pet(app, &normalized);
-                    let _ = app.emit_to("pet", "pet-settings-updated", &normalized);
+                if let Some(s) = updated {
+                    let _ = apply_to_pet_window(app, &s);
+                    let _ = app.emit_to("pet", "pet-settings-updated", &s);
                 }
             }
-            QUIT_ID => app.exit(0),
+            QUIT => app.exit(0),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
@@ -229,17 +227,19 @@ fn create_tray(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
                 ..
             } = event
             {
-                show_controls_window(tray.app_handle());
+                show_controls(tray.app_handle());
             }
         });
 
     if let Some(icon) = app.default_window_icon().cloned() {
-        tray_builder = tray_builder.icon(icon);
+        builder = builder.icon(icon);
     }
 
-    tray_builder.build(app)?;
+    builder.build(app)?;
     Ok(())
 }
+
+// ── Entry Point ──
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -253,6 +253,7 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            // Hide controls window on close instead of quitting
             if window.label() == "main" {
                 if let WindowEvent::CloseRequested { api, .. } = event {
                     api.prevent_close();
@@ -264,8 +265,8 @@ pub fn run() {
             get_cursor_position,
             get_settings,
             update_settings,
-            move_pet_window
+            move_pet_window,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running Neko Runner");
 }

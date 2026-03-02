@@ -1,7 +1,10 @@
+/**
+ * Settings for the desktop pet appearance and behavior.
+ */
 export interface PetSettings {
+  enabled: boolean;
   speed: number;
   size: number;
-  enabled: boolean;
   invert: boolean;
   hueRotate: number;
   saturate: number;
@@ -9,15 +12,21 @@ export interface PetSettings {
   tintStrength: number;
 }
 
+/**
+ * Global cursor position returned from the Rust backend.
+ */
 export interface CursorPosition {
   x: number;
   y: number;
 }
 
-export const defaultSettings: PetSettings = {
+/**
+ * Default pet settings — matches the Rust `PetSettings::default()`.
+ */
+export const DEFAULT_SETTINGS: PetSettings = {
+  enabled: true,
   speed: 10,
   size: 64,
-  enabled: true,
   invert: false,
   hueRotate: 0,
   saturate: 100,
