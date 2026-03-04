@@ -77,7 +77,8 @@ void bootstrap();
 async function bootstrap(): Promise<void> {
   const persisted = loadSettings();
   const backend = await invoke<PetSettings>("get_settings");
-  state.settings = sanitize(persisted ?? backend);
+  const initial = sanitize(persisted ?? backend);
+  state.settings = await syncSettings(initial);
   applyFilters();
   setSprite("idle", 0);
 
@@ -87,6 +88,16 @@ async function bootstrap(): Promise<void> {
   });
 
   window.setInterval(() => void tick(), FRAME_INTERVAL);
+}
+
+async function syncSettings(next: PetSettings): Promise<PetSettings> {
+  try {
+    // Keep backend window size/state in sync with restored frontend settings.
+    const updated = await invoke<PetSettings>("update_settings", { settings: next });
+    return sanitize(updated);
+  } catch {
+    return next;
+  }
 }
 
 /* ── Game Loop ── */

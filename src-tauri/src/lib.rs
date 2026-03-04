@@ -8,6 +8,12 @@ use tauri::{
     Emitter, LogicalPosition, LogicalSize, Manager, Position, Size, WebviewUrl,
     WebviewWindowBuilder, WindowEvent,
 };
+#[cfg(target_os = "windows")]
+use windows::Win32::{
+    Foundation::RECT,
+    Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST},
+    UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect, IsIconic, IsWindowVisible},
+};
 
 // ── Menu item IDs ──
 
@@ -63,7 +69,14 @@ struct AppState {
 // ── Tauri Commands ──
 
 #[tauri::command]
-fn get_cursor_position() -> CursorPosition {
+fn get_cursor_position(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> CursorPosition {
+    let settings = state
+        .settings
+        .lock()
+        .map(|s| s.clone())
+        .unwrap_or_default();
+    let _ = sync_pet_visibility(&app, &settings);
+
     let device = DeviceState::new();
     let mouse = device.get_mouse();
     CursorPosition {
@@ -141,14 +154,76 @@ fn apply_to_pet_window(app: &tauri::AppHandle, settings: &PetSettings) -> Result
             .map_err(|e| e.to_string())?;
         win.set_always_on_top(true)
             .map_err(|e| e.to_string())?;
-
-        if settings.enabled {
-            win.show().map_err(|e| e.to_string())?;
-        } else {
-            win.hide().map_err(|e| e.to_string())?;
-        }
+        let should_show = settings.enabled && !is_foreground_fullscreen();
+        set_pet_visibility(&win, should_show)?;
     }
     Ok(())
+}
+
+fn sync_pet_visibility(app: &tauri::AppHandle, settings: &PetSettings) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("pet") {
+        let should_show = settings.enabled && !is_foreground_fullscreen();
+        set_pet_visibility(&win, should_show)?;
+    }
+    Ok(())
+}
+
+fn set_pet_visibility(win: &tauri::WebviewWindow, should_show: bool) -> Result<(), String> {
+    let is_visible = win.is_visible().unwrap_or(false);
+    if should_show && !is_visible {
+        win.show().map_err(|e| e.to_string())?;
+    } else if !should_show && is_visible {
+        win.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn is_foreground_fullscreen() -> bool {
+    const TOLERANCE_PX: i32 = 2;
+
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.0.is_null() {
+            return false;
+        }
+        if !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() {
+            return false;
+        }
+
+        let mut window_rect = RECT::default();
+        if GetWindowRect(hwnd, &mut window_rect).is_err() {
+            return false;
+        }
+
+        let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if monitor.0.is_null() {
+            return false;
+        }
+
+        let mut monitor_info = MONITORINFO {
+            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        if !GetMonitorInfoW(monitor, &mut monitor_info as *mut MONITORINFO as *mut _).as_bool() {
+            return false;
+        }
+
+        let mw = monitor_info.rcMonitor.right - monitor_info.rcMonitor.left;
+        let mh = monitor_info.rcMonitor.bottom - monitor_info.rcMonitor.top;
+        let ww = window_rect.right - window_rect.left;
+        let wh = window_rect.bottom - window_rect.top;
+
+        ww >= mw - TOLERANCE_PX
+            && wh >= mh - TOLERANCE_PX
+            && window_rect.left <= monitor_info.rcMonitor.left + TOLERANCE_PX
+            && window_rect.top <= monitor_info.rcMonitor.top + TOLERANCE_PX
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn is_foreground_fullscreen() -> bool {
+    false
 }
 
 fn show_controls(app: &tauri::AppHandle) {
