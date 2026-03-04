@@ -9,7 +9,12 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "icons": "npx @aspect-build/rules_js tauri icon src/assets/icon.svg"
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "installer": "tauri build --bundles nsis",
+    "installer:msi": "tauri build --bundles msi",
+    "installer:all": "tauri build --bundles nsis,msi",
+    "icons": "npx tauri icon src/assets/icon.svg"
   },
   "dependencies": {
     "@tauri-apps/api": "^2"

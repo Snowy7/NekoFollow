@@ -34,6 +34,28 @@ npm run tauri dev
 npm run tauri build
 ```
 
+## Build Installers (Windows)
+
+Use the dedicated scripts:
+
+```bash
+# NSIS installer (.exe) - recommended for most users
+npm run installer
+
+# MSI installer (.msi)
+npm run installer:msi
+
+# Build both installers
+npm run installer:all
+```
+
+Installer output files are generated under:
+
+```text
+src-tauri/target/release/bundle/nsis/
+src-tauri/target/release/bundle/msi/
+```
+
 ## Project Structure
 
 ```

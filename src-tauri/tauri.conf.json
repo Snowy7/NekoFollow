@@ -28,13 +28,38 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "nsis",
+      "msi"
+    ],
+    "publisher": "Snowy",
+    "category": "Utility",
+    "shortDescription": "A desktop cat companion that follows your cursor.",
+    "longDescription": "Neko Runner is a lightweight desktop companion app that overlays a playful pixel cat on your screen and lets you customize its behavior and appearance.",
+    "copyright": "Copyright (c) 2026 Snowy",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "wix": {
+        "language": "en-US"
+      },
+      "nsis": {
+        "installMode": "both",
+        "compression": "lzma",
+        "displayLanguageSelector": false,
+        "startMenuFolder": "Neko Runner",
+        "installerIcon": "icons/icon.ico"
+      }
+    }
   }
 }
